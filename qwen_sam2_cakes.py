@@ -207,7 +207,7 @@ def main():
     scores = scores[sorted_ind]
     logits = logits[sorted_ind]
     print('masks shape:', masks.shape)
-    show_masks(orig_rgb, masks, scores, point_coords=input_point, input_labels=input_label, borders=True)
+    save_masks(orig_rgb, masks, scores, point_coords=input_point, input_labels=input_label, borders=True)
 
     # ---------- 4. 叠加 & 保存 ----------
     overlay = orig_rgb.copy()
