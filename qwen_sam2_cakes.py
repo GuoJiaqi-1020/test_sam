@@ -57,7 +57,7 @@ for x, y in re.findall(r"<points\\s+(\\d+)\\s+(\\d+)>", reply):
     pts.append([int(x), int(y)])
 
 if not pts:
-    raise ValueError("未解析出任何 <points x y> 标注！")
+    raise ValueError("No <points x y> annotation!")
 
 # ---------- 绘图 ----------
 img = Image.open(IMAGE_PATH).convert("RGB")
