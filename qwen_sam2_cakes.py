@@ -57,25 +57,21 @@ print("Qwen reply:\n", reply)
 import xml.etree.ElementTree as ET
 
 def extract_points(xml_text: str):
-    """
-    把模型回复里的 ```xml … ```/``` fencing 去掉，
-    然后解析 <points x1="…" y1="…" x2="…" y2="…"> 格式，
-    返回 [(x1,y1), (x2,y2), ...]，顺序按下标递增。
-    """
     xml_text = xml_text.replace("```xml", "").replace("```", "").strip()
-    # 如果模型只返回单行 <points … />，需要包一层根节点
-    wrapper = f"<root>{xml_text}</root>"
-    root = ET.fromstring(wrapper)
+    root = ET.fromstring(f"<root>{xml_text}</root>")
+    out = []
 
-    pts = []
     for tag in root.findall("points"):
-        # attributes: {'x1':'825','y1':'470','x2':'210','y2':'315',...}
+        # ---------- 拿坐标 ----------
         xs = {k[1:]: int(v) for k, v in tag.attrib.items() if k.startswith("x")}
         ys = {k[1:]: int(v) for k, v in tag.attrib.items() if k.startswith("y")}
+        # ---------- 拿文字 ----------
+        label = tag.attrib.get("alt") or (tag.text.strip() if tag.text else "object")
+
         for idx in sorted(xs, key=int):
-            if idx in ys:           # 确保成对
-                pts.append((xs[idx], ys[idx]))
-    return pts
+            if idx in ys:
+                out.append((xs[idx], ys[idx], label))
+    return out
 
 points = extract_points(reply)
 if not points:
@@ -90,13 +86,13 @@ grid_h, grid_w = inputs["image_grid_thw"][0][1:].tolist()
 in_H, in_W = grid_h * 14, grid_w * 14
 print(f"Image size: {W}x{H}, Grid size sent to model: {in_W}x{in_H}")
 
-for i, (x, y) in enumerate(points):
-    vis_x = x / in_W * W
-    vis_y = y / in_H * H
-    c = COLORS[i % len(COLORS)]
-    r = 6
-    draw.ellipse([(vis_x - r, vis_y - r), (vis_x + r, vis_y + r)], fill=c)
-    draw.text((vis_x + r + 4, vis_y + r + 4), f"cake{i+1}", fill=c)
+for i, (x, y, label) in enumerate(points):
+    vx = x / in_W * W
+    vy = y / in_H * H
+    c  = COLORS[i % len(COLORS)]
+    r  = 6
+    draw.ellipse([(vx - r, vy - r), (vx + r, vy + r)], fill=c)
+    draw.text((vx + r + 4, vy + r + 4), label, fill=c)
 
 img.save(OUT_PNG)
 print("Saved →", pathlib.Path(OUT_PNG).resolve())
