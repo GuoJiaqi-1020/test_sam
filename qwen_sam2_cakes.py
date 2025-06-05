@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageColor
 import torch
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from qwen_vl_utils import process_vision_info
-from sam2.modeling import SamPredictor
+from segment_anything import SamPredictor, sam_model_registry
 
 # ---------- 路径 / 提示 ----------
 MODEL_DIR   = "./qwen_vl"
@@ -94,7 +94,8 @@ for i, (x, y, label) in enumerate(points):
 
 img_pil.save(OUT_QWEN)
 print("Points saved →", pathlib.Path(OUT_QWEN).resolve())
-
+###########################################
+###########################################
 # ========== SAM-2 分割 ==========
 predictor = SamPredictor(checkpoint=SAM2_CKPT, model_type="vit_h")
 # SAM2 需要 BGR numpy
