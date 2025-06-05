@@ -213,6 +213,7 @@ def main():
         # Skip LLM
         img_w, img_h = Image.open(IMAGE_PATH).size
         if RANDOM_N > 0:
+            print("**** The number of random points:", RANDOM_N)
             points = [(random.randint(0, img_w-1),
                        random.randint(0, img_h-1),
                        f"rand{i+1}") for i in range(RANDOM_N)]
