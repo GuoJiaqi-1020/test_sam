@@ -185,8 +185,9 @@ def main():
     predictor.set_image(orig_rgb)
     # input_point = np.array([[750, 783]])
     input_label = np.array([1])
+    pts_xy = np.array([(x, y) for x, y, _ in points], dtype=np.float32)
     masks, scores, logits = predictor.predict(
-        point_coords=points,
+        point_coords=pts_xy,
         point_labels=input_label,
         multimask_output=True,
     )
@@ -195,7 +196,7 @@ def main():
     scores = scores[sorted_ind]
     logits = logits[sorted_ind]
     print('masks shape:', masks.shape)
-    save_masks(orig_rgb, masks, scores, point_coords=input_point, input_labels=input_label, borders=True)
+    save_masks(orig_rgb, masks, scores, point_coords=pts_xy, input_labels=input_label, borders=True)
 
     # ---------- 4. 叠加 & 保存 ----------
     overlay = orig_rgb.copy()
