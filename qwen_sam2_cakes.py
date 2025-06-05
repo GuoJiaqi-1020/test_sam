@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 def show_mask(mask, ax, random_color=False, borders = True):
     if random_color:
