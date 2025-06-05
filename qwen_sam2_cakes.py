@@ -1,36 +1,17 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-Qwen points → SAM-2 segmentation → overlay
-"""
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5"
-
-import re, pathlib, xml.etree.ElementTree as ET
-from typing import List
-import numpy as np
-import cv2
 import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw, ImageFont, ImageColor
+import numpy as np
 
-import torch
-from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
-from qwen_vl_utils import process_vision_info
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
-
-def show_mask(mask, ax, random_color=False, borders = True):
+def show_mask(mask, ax, random_color=False, borders=True):
     if random_color:
         color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
     else:
         color = np.array([30/255, 144/255, 255/255, 0.6])
     h, w = mask.shape[-2:]
     mask = mask.astype(np.uint8)
-    mask_image =  mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
+    mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
     if borders:
         import cv2
-        contours, _ = cv2.findContours(mask,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        # Try to smooth contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         contours = [cv2.approxPolyDP(contour, epsilon=0.01, closed=True) for contour in contours]
         mask_image = cv2.drawContours(mask_image, contours, -1, (1, 1, 1, 0.5), thickness=2)
     ax.imshow(mask_image)
@@ -58,30 +39,28 @@ def save_masks(
     ext: str = "png",
 ):
     """
-    Save multiple masks sequentially as prefix1.png, prefix2.png, … in the current directory.
+    Save multiple masks sequentially as prefix1.png, prefix2.png, ... in the current directory.
     Supports visualizing points (point_coords, input_labels) and boxes (box_coords).
 
     Args:
         image:          Original RGB image, shape=(H, W, 3), dtype=uint8.
-        masks:          List of masks, each a float or bool array of shape=(h, w).
-        scores:         Confidence scores corresponding to the masks.
-        point_coords:   Optional, shape=(N, 2) array of point coordinates for overlay.
-        box_coords:     Optional, tuple (x0, y0, x1, y1) defining a bounding box.
+        masks:          List of masks, each is a float or bool array of shape=(h, w).
+        scores:         Confidence score list corresponding to the masks.
+        point_coords:   Optional, shape=(N,2) point coordinates for overlay.
+        box_coords:     Optional, box coordinates in the format (x0, y0, x1, y1).
         input_labels:   Optional, shape=(N,) array of 1/0 indicating positive/negative points.
-        borders:        Whether to draw borders around the mask (default True).
-        prefix:         Filename prefix (e.g., "sam_" results in sam_1.png, etc.).
-        ext:            File extension (default "png").
+        borders:        Whether to draw contours around the mask (default: True).
+        prefix:         Filename prefix for saving (e.g., "sam_" → sam_1.png).
+        ext:            File extension (default: "png").
 
-    Note:
-        - If a mask resolution ≠ image resolution, it is resized to (H, W) using nearest-neighbor interpolation.
-        - If mask dtype is not bool, (mask > 0.5) is applied to convert to boolean.
+    Notes:
+        - If mask resolution ≠ original image, it will be resized using INTER_NEAREST.
+        - If mask dtype is not bool, it will be converted with (mask > 0.5).
     """
     H, W = image.shape[:2]
 
     def show_mask(mask, ax, random_color=False, borders=True):
-        """
-        Draw a single mask on a matplotlib axis.
-        """
+        """Draw a single mask onto matplotlib axis."""
         if random_color:
             color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
         else:
@@ -96,11 +75,6 @@ def save_masks(
         ax.imshow(mask_image)
 
     def show_points(coords, labels, ax, marker_size=375):
-        """
-        Draw positive and negative points on a matplotlib axis.
-        coords: shape=(N, 2)
-        labels: shape=(N,) where 1 indicates a positive point, 0 indicates a negative point.
-        """
         pos = coords[labels == 1]
         neg = coords[labels == 0]
         ax.scatter(pos[:, 0], pos[:, 1], color="green", marker="*", s=marker_size,
@@ -109,31 +83,19 @@ def save_masks(
                    edgecolor="white", linewidth=1.25)
 
     def show_box(box, ax):
-        """
-        Draw a bounding box on a matplotlib axis.
-        box: (x0, y0, x1, y1)
-        """
         x0, y0, x1, y1 = box
         w, h = x1 - x0, y1 - y0
         ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor="green",
                                    facecolor=(0, 0, 0, 0), lw=2))
 
     for i, (mask, score) in enumerate(zip(masks, scores), start=1):
-        # 1. Convert mask to boolean if needed
-        if mask.dtype != np.bool_:
-            m_bool = (mask > 0.5)
-        else:
-            m_bool = mask
+        m_bool = (mask > 0.5) if mask.dtype != np.bool_ else mask
 
-        # 2. Resize mask to (H, W) if resolution differs
         if m_bool.shape != (H, W):
             m_uint = m_bool.astype(np.uint8)
-            m_resized = cv2.resize(
-                m_uint, (W, H), interpolation=cv2.INTER_NEAREST
-            )
+            m_resized = cv2.resize(m_uint, (W, H), interpolation=cv2.INTER_NEAREST)
             m_bool = m_resized.astype(bool)
 
-        # 3. Plot mask onto a new matplotlib figure
         fig, ax = plt.subplots(figsize=(6, 6))
         ax.imshow(image)
         show_mask(m_bool, ax, borders=borders)
@@ -148,31 +110,29 @@ def save_masks(
             ax.set_title(f"Mask {i}, Score: {score:.3f}", fontsize=16)
 
         ax.axis("off")
-
-        # 4. Save figure
         fname = f"{prefix}{i}.{ext}"
         fig.savefig(fname, bbox_inches="tight", pad_inches=0)
         plt.close(fig)
         print("saved:", fname)
 
-# ───────── GPU Visibility ─────────
+# ───────── GPU visibility ─────────
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5"
 
-# ───────── Common Dependencies ─────────
+# ───────── Common dependencies ─────────
 import pathlib, xml.etree.ElementTree as ET, random, re, numpy as np, cv2, torch
 from typing import List
 from PIL import Image, ImageDraw, ImageColor, ImageFont
 
-# ───────── Qwen (Optional) ─────────
+# ───────── Qwen (optional) ─────────
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from qwen_vl_utils import process_vision_info
 
-# ───────── SAM-2.1 ───────────
+# ───────── SAM-2.1 ─────────
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
-# ========== Configuration ==========
+# ========== Configurations ==========
 IMAGE_PATH  = "./assets/spatial_understanding/cakes.png"
 MODEL_DIR   = "./qwen_vl"
 PROMPT      = (
@@ -180,32 +140,29 @@ PROMPT      = (
     "<points x y>object</points>"
 )
 
-# SAM-2.1 paths
+# SAM-2.1
 sam2_checkpoint = "./checkpoints/sam2.1_hiera_large.pt"
-model_cfg       = "configs/sam2.1/sam2.1_hiera_l.yaml"
+model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
 
 DEVICE   = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Output filenames
+# Output files
 OUT_QWEN = "QWEN_output.png"
 OUT_SAM2 = "SAM2_output.png"
 
-# Font path
+# Font
 FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
-# Color list
 COLORS = list(ImageColor.colormap.keys())
 
-# --- Toggle Qwen usage ---
-USE_QWEN     = True          # If False, skip Qwen and use fixed/random points
-FIXED_POINTS = [(750, 784, "spoon")]
-RANDOM_N     = 0             # If >0, generate RANDOM_N random points
+# ---- Qwen bypass toggle ----
+USE_QWEN     = True          # = False to use fixed/random points
+FIXED_POINTS = [(750, 784, "spoon")]   # Used only if USE_QWEN=False and RANDOM_N=0
+RANDOM_N     = 0             # Set >0 to randomly generate N points
 
-# ───────── Helper Functions ─────────
+# ───────── Utility functions ─────────
 def extract_points(xml_text: str) -> List[tuple]:
-    """
-    Parse Qwen XML and return a list of (x, y, label).
-    """
+    """Parse Qwen XML -> [(x,y,label), ...]"""
     xml_text = xml_text.replace("```xml", "").replace("```", "").strip()
     root = ET.fromstring(f"<root>{xml_text}</root>")
     outs = []
@@ -224,9 +181,9 @@ def load_font(size=20):
     except IOError:
         return ImageFont.load_default()
 
-# ========== Main ==========
+# ========== Main workflow ==========
 def main():
-    # 1. Get points (either from Qwen or manually)
+    # ---------- 1. Get point(s) ----------
     if USE_QWEN:
         proc  = AutoProcessor.from_pretrained(MODEL_DIR, trust_remote_code=True)
         model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
@@ -251,10 +208,9 @@ def main():
         points = extract_points(reply)
 
         if not points:
-            raise RuntimeError("Qwen returned no points; check prompt or model output.")
-
+            raise RuntimeError("Qwen output is empty. Check the prompt or model output.")
     else:
-        # Skip LLM; use fixed or random points
+        # Skip LLM
         img_w, img_h = Image.open(IMAGE_PATH).size
         if RANDOM_N > 0:
             points = [(random.randint(0, img_w-1),
@@ -262,13 +218,12 @@ def main():
                        f"rand{i+1}") for i in range(RANDOM_N)]
         else:
             points = FIXED_POINTS
-        print("⚡ Using manual/random points:", points)
+        print("⚡ Using manual points:", points)
 
-        # Construct dummy inputs so we can compute in_W/in_H
-        in_W, in_H = img_w, img_h
+        in_W, in_H = img_w, img_h   # Use original dimensions
         inputs = {"image_grid_thw": np.array([[1, in_H//14, in_W//14]])}
 
-    # 2. Draw QWEN_output.png (points + labels)
+    # ---------- 2. Draw QWEN_output.png ----------
     img_pil = Image.open(IMAGE_PATH).convert("RGB")
     W, H = img_pil.size
     draw = ImageDraw.Draw(img_pil)
@@ -288,53 +243,26 @@ def main():
     img_pil.save(OUT_QWEN)
     print("Points saved →", pathlib.Path(OUT_QWEN).resolve())
 
-    # 3. SAM-2.1 segmentation
-    initialize_config_dir(config_dir=CFG_DIR, job_name="sam2_local")
-    cfg = compose(config_name=CFG_NAME)
-    sam2_model = build_sam2(cfg, SAM_PT, device=DEVICE)
-    predictor = SAM2ImagePredictor(sam2_model)
+    # ---------- 3. SAM-2.1 segmentation ----------
+    sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=DEVICE)
+    predictor   = SAM2ImagePredictor(sam2_model)
 
     orig_rgb = np.array(Image.open(IMAGE_PATH).convert("RGB"))
     predictor.set_image(orig_rgb)
 
+    input_label = np.array([1])
     pts_xy = np.array([(x, y) for x, y, _ in points], dtype=np.float32)
     masks, scores, logits = predictor.predict(
         point_coords=pts_xy,
-        point_labels=np.array([1] * len(points), dtype=np.int32),
+        point_labels=input_label,
         multimask_output=True,
     )
     sorted_ind = np.argsort(scores)[::-1]
     masks = masks[sorted_ind]
     scores = scores[sorted_ind]
-    print("masks shape:", masks.shape)
-
-    # Save individual masks
-    save_masks(orig_rgb, masks, scores, point_coords=pts_xy, input_labels=np.ones(len(points), dtype=np.int32), borders=True)
-    print("SAM2 masks saved!")
-
-    # 4. Overlay masks with 40% transparency
-    overlay = orig_rgb.copy()
-    alpha   = 0.4
-    for idx, m in enumerate(masks):
-        # Ensure boolean mask
-        m_bool = (m > 0.5) if m.dtype != np.bool_ else m
-
-        # Resize mask if needed
-        if m_bool.shape != (H, W):
-            m_uint = m_bool.astype(np.uint8)
-            m_resized = cv2.resize(
-                m_uint, (W, H), interpolation=cv2.INTER_NEAREST
-            )
-            m_bool = m_resized.astype(bool)
-
-        # Color and overlay
-        color = ImageColor.getrgb(COLORS[idx % len(COLORS)])
-        layer = np.zeros_like(orig_rgb)
-        layer[m_bool] = color
-        overlay = cv2.addWeighted(layer, alpha, overlay, 1 - alpha, 0)
-
-    Image.fromarray(overlay).save(OUT_SAM2)
-    print("Overlay saved →", pathlib.Path(OUT_SAM2).resolve())
+    print('masks shape:', masks.shape)
+    save_masks(orig_rgb, masks, scores, point_coords=pts_xy, input_labels=input_label, borders=True)
+    print("SAM2 masks saved !!!")
 
 if __name__ == "__main__":
     main()
