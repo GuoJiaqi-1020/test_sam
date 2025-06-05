@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="rhea.fsm.northwestern.edu" id="0c7f6bf5-881b-479c-8644-75e7ac69c5f5" port="22" nameFormat="DESCRIPTIVE" username="jgr9647" useOpenSSHConfig="true" />
+      <sshConfig authType="PASSWORD" host="zeus.northwestern.edu" id="4f000c1c-3c8c-48bf-bf2f-046ca7b6c5f5" port="22" nameFormat="DESCRIPTIVE" username="jacky" useOpenSSHConfig="true" />
+    </configs>
+  </component>
+</project>

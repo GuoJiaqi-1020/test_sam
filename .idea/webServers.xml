@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="0540e19b-a1f0-4a34-8a66-376ad8cc8068" name="rh">
+        <fileTransfer rootFolder="/home/jgr9647/test_sam" accessType="SFTP" host="rhea.fsm.northwestern.edu" port="22" sshConfigId="0c7f6bf5-881b-479c-8644-75e7ac69c5f5" sshConfig="jgr9647@rhea.fsm.northwestern.edu:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="1844eb85-b9fb-4e76-a91e-0871d693f90d" name="zeus">
+        <fileTransfer accessType="SFTP" host="zeus.northwestern.edu" port="22" sshConfigId="4f000c1c-3c8c-48bf-bf2f-046ca7b6c5f5" sshConfig="jacky@zeus.northwestern.edu:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
