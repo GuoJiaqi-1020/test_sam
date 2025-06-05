@@ -23,7 +23,7 @@ from qwen_vl_utils import process_vision_info
 MODEL_DIR  = "./qwen_vl"
 IMAGE_PATH = "./assets/spatial_understanding/cakes.png"
 # PROMPT = "point to the rolling pin on the far side of the table, output its coordinates in XML format <points x y>object</points>"
-PROMPT = "Locate the spoon, and output their coordinates in XML format <points x y>object</points>"
+PROMPT = "Locate the brown cake and the empty spoon, and output their coordinates in XML format <points x y>object</points>"
 OUT_PNG = "cakes_with_points.png"
 COLORS = list(ImageColor.colormap.keys())
 
@@ -50,6 +50,7 @@ inputs = proc(text=text, images=imgs, videos=vids, return_tensors="pt", **vkw).t
 with torch.inference_mode():
     out_ids = model.generate(**inputs, max_new_tokens=128)
 reply = proc.tokenizer.decode(out_ids[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+print("The Prompt:\n", PROMPT)
 print("Qwen reply:\n", reply)
 
 # ---------- 解析 XML ----------
