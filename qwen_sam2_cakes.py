@@ -53,12 +53,32 @@ reply = proc.tokenizer.decode(out_ids[0][inputs.input_ids.shape[1]:], skip_speci
 print("Qwen reply:\n", reply)
 
 # ---------- 解析 XML ----------
-pts: List[List[int]] = []
-for x, y in re.findall(r"<points\\s+(\\d+)\\s+(\\d+)>", reply):
-    pts.append([int(x), int(y)])
+import xml.etree.ElementTree as ET
 
-if not pts:
-    raise ValueError("No <points x y> annotation!")
+def extract_points(xml_text: str):
+    """
+    把模型回复里的 ```xml … ```/``` fencing 去掉，
+    然后解析 <points x1="…" y1="…" x2="…" y2="…"> 格式，
+    返回 [(x1,y1), (x2,y2), ...]，顺序按下标递增。
+    """
+    xml_text = xml_text.replace("```xml", "").replace("```", "").strip()
+    # 如果模型只返回单行 <points … />，需要包一层根节点
+    wrapper = f"<root>{xml_text}</root>"
+    root = ET.fromstring(wrapper)
+
+    pts = []
+    for tag in root.findall("points"):
+        # attributes: {'x1':'825','y1':'470','x2':'210','y2':'315',...}
+        xs = {k[1:]: int(v) for k, v in tag.attrib.items() if k.startswith("x")}
+        ys = {k[1:]: int(v) for k, v in tag.attrib.items() if k.startswith("y")}
+        for idx in sorted(xs, key=int):
+            if idx in ys:           # 确保成对
+                pts.append((xs[idx], ys[idx]))
+    return pts
+
+points = extract_points(reply)
+if not points:
+    raise ValueError("No <points …> annotation parsed!")
 
 # ---------- 绘图 ----------
 img = Image.open(IMAGE_PATH).convert("RGB")
@@ -67,9 +87,9 @@ draw = ImageDraw.Draw(img)
 
 grid_h, grid_w = inputs["image_grid_thw"][0][1:].tolist()
 in_H, in_W = grid_h * 14, grid_w * 14
-print(f"Image size: {W}x{H}, Grid size: {in_W}x{in_H}")
+print(f"Image size: {W}x{H}, Grid size sent to model: {in_W}x{in_H}")
 
-for i, (x, y) in enumerate(pts):
+for i, (x, y) in enumerate(points):
     vis_x = x / in_W * W
     vis_y = y / in_H * H
     c = COLORS[i % len(COLORS)]
