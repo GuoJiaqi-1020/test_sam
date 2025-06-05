@@ -27,23 +27,40 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0, 0, 0, 0), lw=2))
 
-def save_masks(image, masks, scores, prefix="", ext="png"):
+def save_masks(
+    image,
+    masks,
+    scores,
+    point_coords=None,
+    box_coords=None,
+    input_labels=None,
+    borders=True,
+    prefix="",
+    ext="png",
+):
 
     import matplotlib.pyplot as plt
-    for i,(m,s) in enumerate(zip(masks,scores),1):
-        plt.figure(figsize=(6,6))
-        plt.imshow(image); plt.axis("off")
-        # 画掩膜
-        from PIL import Image
-        h,w = m.shape; rgba = Image.new("RGBA",(w,h),(0,0,0,0))
-        col = np.array([30/255,144/255,255/255,0.6])
-        rgba_arr = np.array(rgba)
-        rgba_arr[m.astype(bool)] = (col*255).astype(np.uint8)
-        plt.imshow(rgba_arr)
-        if len(scores)>1: plt.title(f"Mask {i}, {s:.3f}")
-        fname=f"{prefix}{i}.{ext}"
-        plt.savefig(fname,bbox_inches="tight",pad_inches=0)
-        plt.close(); print("saved:",fname)
+
+    for i, (mask, score) in enumerate(zip(masks, scores), 1):
+        plt.figure(figsize=(6, 6))
+        plt.imshow(image)
+        show_mask(mask, plt.gca(), borders=borders)
+
+        # ---- 额外可视化（可选）----
+        if point_coords is not None and input_labels is not None:
+            show_points(point_coords, input_labels, plt.gca())
+        if box_coords is not None:
+            show_box(box_coords, plt.gca())
+
+        if len(scores) > 1:
+            plt.title(f"Mask {i}, Score: {score:.3f}")
+
+        plt.axis("off")
+        fname = f"{prefix}{i}.{ext}"
+        plt.savefig(fname, bbox_inches="tight", pad_inches=0)
+        plt.close()
+        print("saved:", fname)
+
 # ───────── GPU 可见性 ─────────
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5"
