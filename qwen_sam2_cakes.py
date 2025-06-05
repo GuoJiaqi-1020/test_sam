@@ -27,21 +27,34 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0, 0, 0, 0), lw=2))
 
-def show_masks(image, masks, scores, point_coords=None, box_coords=None, input_labels=None, borders=True):
-    for i, (mask, score) in enumerate(zip(masks, scores)):
+def save_masks(
+    image,
+    masks,
+    scores,
+    point_coords=None,
+    box_coords=None,
+    input_labels=None,
+    borders=True,
+    prefix="",
+    ext="png",
+):
+
+    for i, (mask, score) in enumerate(zip(masks, scores), 1):
         plt.figure(figsize=(10, 10))
         plt.imshow(image)
         show_mask(mask, plt.gca(), borders=borders)
-        if point_coords is not None:
-            assert input_labels is not None
+        if point_coords is not None and input_labels is not None:
             show_points(point_coords, input_labels, plt.gca())
         if box_coords is not None:
-            # boxes
             show_box(box_coords, plt.gca())
         if len(scores) > 1:
-            plt.title(f"Mask {i+1}, Score: {score:.3f}", fontsize=18)
-        plt.axis('off')
-        plt.show()
+            plt.title(f"Mask {i}, Score: {score:.3f}", fontsize=18)
+        plt.axis("off")
+
+        fname = f"{prefix}{i}.{ext}"
+        plt.savefig(fname, bbox_inches="tight", pad_inches=0)
+        plt.close()
+        print("saved:", fname)
 
 # ───────── GPU 可见性 ─────────
 import os
@@ -182,17 +195,19 @@ def main():
 
     orig_rgb = np.array(Image.open(IMAGE_PATH).convert("RGB"))
     predictor.set_image(orig_rgb)
-
-    masks = []
-    for (x, y, _) in points:
-        vx = x / in_W * W
-        vy = y / in_H * H
-        m, _ = predictor.predict(
-            point_coords=np.array([[vx, vy]]),
-            point_labels=np.array([1], dtype=np.int32),
-            multimask_output=False,
-        )
-        masks.append(m[0])
+    input_point = np.array([[750, 783]])
+    input_label = np.array([1])
+    masks, scores, logits = predictor.predict(
+        point_coords=input_point,
+        point_labels=input_label,
+        multimask_output=True,
+    )
+    sorted_ind = np.argsort(scores)[::-1]
+    masks = masks[sorted_ind]
+    scores = scores[sorted_ind]
+    logits = logits[sorted_ind]
+    print('masks shape:', masks.shape)
+    show_masks(orig_rgb, masks, scores, point_coords=input_point, input_labels=input_label, borders=True)
 
     # ---------- 4. 叠加 & 保存 ----------
     overlay = orig_rgb.copy()
