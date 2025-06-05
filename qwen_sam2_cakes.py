@@ -82,7 +82,7 @@ PROMPT      = (
 )
 
 # SAM-2.1
-sam2_checkpoint = "../checkpoints/sam2.1_hiera_large.pt"
+sam2_checkpoint = "./checkpoints/sam2.1_hiera_large.pt"
 model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
 
 DEVICE   = "cuda" if torch.cuda.is_available() else "cpu"
