@@ -90,7 +90,7 @@ for i, (x, y, label) in enumerate(points):
     vx = x / in_W * W
     vy = y / in_H * H
     c  = COLORS[i % len(COLORS)]
-    r  = 6
+    r  = 10
     draw.ellipse([(vx - r, vy - r), (vx + r, vy + r)], fill=c)
     draw.text((vx + r + 4, vy + r + 4), label, fill=c)
 
