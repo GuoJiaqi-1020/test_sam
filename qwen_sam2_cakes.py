@@ -27,7 +27,6 @@ PROMPT = (
     "<points x1 y1>cake</points><points x2 y2>cake</points>..."
 )
 OUT_PNG = "cakes_with_points.png"
-FONT = ImageFont.truetype("NotoSansCJK-Regular.ttc", size=16)
 COLORS = list(ImageColor.colormap.keys())
 
 # ---------- 加载模型 ----------
@@ -78,7 +77,7 @@ for i, (x, y) in enumerate(pts):
     c = COLORS[i % len(COLORS)]
     r = 6
     draw.ellipse([(vis_x - r, vis_y - r), (vis_x + r, vis_y + r)], fill=c)
-    draw.text((vis_x + r + 4, vis_y + r + 4), f"cake{i+1}", fill=c, font=FONT)
+    draw.text((vis_x + r + 4, vis_y + r + 4), f"cake{i+1}", fill=c)
 
 img.save(OUT_PNG)
 print("Saved →", pathlib.Path(OUT_PNG).resolve())
