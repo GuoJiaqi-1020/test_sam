@@ -64,9 +64,9 @@ img = Image.open(IMAGE_PATH).convert("RGB")
 W, H = img.size
 draw = ImageDraw.Draw(img)
 
-# Qwen 输入前对图片做了缩放，需映射回原分辨率
-grid_h, grid_w = inputs["image_grid_thw"][0][1:].tolist()  # patch 格子数
-in_H, in_W = grid_h * 14, grid_w * 14                      # 每 patch 14 px
+grid_h, grid_w = inputs["image_grid_thw"][0][1:].tolist()
+in_H, in_W = grid_h * 14, grid_w * 14
+print(f"Image size: {W}x{H}, Grid size: {in_W}x{in_H}")
 
 for i, (x, y) in enumerate(pts):
     vis_x = x / in_W * W
