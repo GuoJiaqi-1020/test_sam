@@ -15,13 +15,16 @@ from PIL import Image, ImageDraw, ImageFont, ImageColor
 import torch
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
 from qwen_vl_utils import process_vision_info
-from segment_anything import SamPredictor, sam_model_registry
+from sam2.build_sam import build_sam2
+from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 # ---------- 路径 / 提示 ----------
 MODEL_DIR   = "./qwen_vl"
 IMAGE_PATH  = "./assets/spatial_understanding/cakes.png"
 PROMPT      = "Locate the spoon, and output its coordinates in XML format <points x y>object</points>"
-SAM2_CKPT   = "./sam2_ckpt/sam2_hiera_large.pt"   # ← 改成你的权重路径
+SAM2_YAML = "./sam2.1/sam2.1_hiera_l.yaml"
+SAM2_PT   = "./sam2.1/sam2.1_hiera_large.pt"
+device    = "cuda" if torch.cuda.is_available() else "cpu"
 OUT_QWEN    = "QWEN_output.png"
 OUT_SAM2    = "SAM2_output.png"
 COLORS      = list(ImageColor.colormap.keys())
@@ -97,31 +100,35 @@ print("Points saved →", pathlib.Path(OUT_QWEN).resolve())
 ###########################################
 ###########################################
 # ========== SAM-2 分割 ==========
-predictor = SamPredictor(checkpoint=SAM2_CKPT, model_type="vit_h")
-# SAM2 需要 BGR numpy
-orig_bgr = cv2.imread(IMAGE_PATH)
-predictor.set_image(orig_bgr[:, :, ::-1])           # convert to RGB inside set_image
+sam2_model   = build_sam2(SAM2_YAML, SAM2_PT, device=device)
+predictor    = SAM2ImagePredictor(sam2_model)
+
+orig_rgb = np.array(Image.open(IMAGE_PATH).convert("RGB"))
+predictor.set_image(orig_rgb)
+
+print("SAM-2 model loaded:", SAM2_PT)
+print("##########################")
+print("points to predict:", points)
 
 masks = []
 for (x, y, _) in points:
-    # 原点坐标已经映射回原图尺寸 (vx, vy)
     vx = x / in_W * W
     vy = y / in_H * H
-    m, _, _ = predictor.predict(
-        point_coords=np.array([[vx, vy]]),
-        point_labels=np.array([1], dtype=np.int32),
-        multimask_output=False
+    m, _ = predictor.predict(
+        point_coords = np.array([[vx, vy]]),
+        point_labels = np.array([1], dtype=np.int32),   # 1 = foreground
+        multimask_output = False
     )
     masks.append(m[0])
 
 # ---------- 半透明叠加 ----------
-overlay = orig_bgr.copy()
-alpha = 0.4
+overlay = orig_rgb.copy()
+alpha   = 0.4
 for idx, m in enumerate(masks):
     color = ImageColor.getrgb(COLORS[idx % len(COLORS)])
-    layer = np.zeros_like(orig_bgr)
-    layer[m] = color[::-1]        # RGB→BGR
+    layer = np.zeros_like(orig_rgb)
+    layer[m] = color
     overlay = cv2.addWeighted(layer, alpha, overlay, 1 - alpha, 0)
 
-cv2.imwrite(OUT_SAM2, overlay)
-print("Overlay saved →", pathlib.Path(OUT_SAM2).resolve())
+Image.fromarray(overlay).save("SAM2_output.png")
+print("Overlay saved →", pathlib.Path("SAM2_output.png").resolve())
