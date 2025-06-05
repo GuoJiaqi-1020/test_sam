@@ -127,67 +127,67 @@ def load_font(size=20):
 
 # ========== 主流程 ==========
 def main():
-    # ---------- 1. 获取点 ----------
-    if USE_QWEN:
-        proc  = AutoProcessor.from_pretrained(MODEL_DIR, trust_remote_code=True)
-        model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            MODEL_DIR, torch_dtype="auto", device_map="auto", trust_remote_code=True
-        )
-
-        messages = [[{
-            "role": "user",
-            "content": [
-                {"type": "image", "image": f"file://{IMAGE_PATH}"},
-                {"type": "text",  "text": PROMPT}
-            ]
-        }]]
-        text = proc.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        imgs, vids, vkw = process_vision_info(messages, return_video_kwargs=True)
-        inputs = proc(text=text, images=imgs, videos=vids, return_tensors="pt", **vkw).to(model.device)
-
-        with torch.inference_mode():
-            out_ids = model.generate(**inputs, max_new_tokens=128)
-        reply = proc.tokenizer.decode(out_ids[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-        print("Qwen reply:\n", reply)
-        points = extract_points(reply)
-
-        if not points:
-            raise RuntimeError("Qwen 返回为空，检查提示词或模型输出。")
-
-    else:
-        # 跳过 LLM
-        img_w, img_h = Image.open(IMAGE_PATH).size
-        if RANDOM_N > 0:
-            points = [(random.randint(0, img_w-1),
-                       random.randint(0, img_h-1),
-                       f"rand{i+1}") for i in range(RANDOM_N)]
-        else:
-            points = FIXED_POINTS
-        print("⚡ 使用手动点：", points)
-
-        # 构造假的 inputs 以便获取 in_W/in_H
-        in_W, in_H = img_w, img_h   # 直接用原尺寸
-        inputs = {"image_grid_thw": np.array([[1, in_H//14, in_W//14]])}
-
-    # ---------- 2. 绘制 QWEN_output.png ----------
-    img_pil = Image.open(IMAGE_PATH).convert("RGB")
-    W, H = img_pil.size
-    draw = ImageDraw.Draw(img_pil)
-
-    grid_h, grid_w = inputs["image_grid_thw"][0][1:].tolist()
-    in_H, in_W = grid_h * 14, grid_w * 14
-    font = load_font(20)
-
-    for i, (x, y, label) in enumerate(points):
-        vx = x / in_W * W
-        vy = y / in_H * H
-        c  = COLORS[i % len(COLORS)]
-        r  = 10
-        draw.ellipse([(vx - r, vy - r), (vx + r, vy + r)], fill=c)
-        draw.text((vx + r + 4, vy + r + 4), label, fill=c, font=font)
-
-    img_pil.save(OUT_QWEN)
-    print("Points saved →", pathlib.Path(OUT_QWEN).resolve())
+    # # ---------- 1. 获取点 ----------
+    # if USE_QWEN:
+    #     proc  = AutoProcessor.from_pretrained(MODEL_DIR, trust_remote_code=True)
+    #     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    #         MODEL_DIR, torch_dtype="auto", device_map="auto", trust_remote_code=True
+    #     )
+    #
+    #     messages = [[{
+    #         "role": "user",
+    #         "content": [
+    #             {"type": "image", "image": f"file://{IMAGE_PATH}"},
+    #             {"type": "text",  "text": PROMPT}
+    #         ]
+    #     }]]
+    #     text = proc.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    #     imgs, vids, vkw = process_vision_info(messages, return_video_kwargs=True)
+    #     inputs = proc(text=text, images=imgs, videos=vids, return_tensors="pt", **vkw).to(model.device)
+    #
+    #     with torch.inference_mode():
+    #         out_ids = model.generate(**inputs, max_new_tokens=128)
+    #     reply = proc.tokenizer.decode(out_ids[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+    #     print("Qwen reply:\n", reply)
+    #     points = extract_points(reply)
+    #
+    #     if not points:
+    #         raise RuntimeError("Qwen 返回为空，检查提示词或模型输出。")
+    #
+    # else:
+    #     # 跳过 LLM
+    #     img_w, img_h = Image.open(IMAGE_PATH).size
+    #     if RANDOM_N > 0:
+    #         points = [(random.randint(0, img_w-1),
+    #                    random.randint(0, img_h-1),
+    #                    f"rand{i+1}") for i in range(RANDOM_N)]
+    #     else:
+    #         points = FIXED_POINTS
+    #     print("⚡ 使用手动点：", points)
+    #
+    #     # 构造假的 inputs 以便获取 in_W/in_H
+    #     in_W, in_H = img_w, img_h   # 直接用原尺寸
+    #     inputs = {"image_grid_thw": np.array([[1, in_H//14, in_W//14]])}
+    #
+    # # ---------- 2. 绘制 QWEN_output.png ----------
+    # img_pil = Image.open(IMAGE_PATH).convert("RGB")
+    # W, H = img_pil.size
+    # draw = ImageDraw.Draw(img_pil)
+    #
+    # grid_h, grid_w = inputs["image_grid_thw"][0][1:].tolist()
+    # in_H, in_W = grid_h * 14, grid_w * 14
+    # font = load_font(20)
+    #
+    # for i, (x, y, label) in enumerate(points):
+    #     vx = x / in_W * W
+    #     vy = y / in_H * H
+    #     c  = COLORS[i % len(COLORS)]
+    #     r  = 10
+    #     draw.ellipse([(vx - r, vy - r), (vx + r, vy + r)], fill=c)
+    #     draw.text((vx + r + 4, vy + r + 4), label, fill=c, font=font)
+    #
+    # img_pil.save(OUT_QWEN)
+    # print("Points saved →", pathlib.Path(OUT_QWEN).resolve())
 
     # ---------- 3. SAM-2.1 分割 ----------
     sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=DEVICE)
