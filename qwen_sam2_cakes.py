@@ -91,7 +91,7 @@ def save_masks(
                                    facecolor=(0, 0, 0, 0), lw=2))
 
     for i, (mask, score) in enumerate(zip(masks, scores), start=1):
-        # 1️⃣ 转 bool
+
         if mask.dtype != np.bool_:
             m_bool = (mask > 0.5)
         else:
