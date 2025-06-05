@@ -28,37 +28,100 @@ def show_box(box, ax):
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0, 0, 0, 0), lw=2))
 
 def save_masks(
-    image,
-    masks,
-    scores,
-    point_coords=None,
-    box_coords=None,
-    input_labels=None,
-    borders=True,
-    prefix="",
-    ext="png",
+    image: np.ndarray,
+    masks: list,
+    scores: list,
+    point_coords: np.ndarray = None,
+    box_coords: np.ndarray = None,
+    input_labels: np.ndarray = None,
+    borders: bool = True,
+    prefix: str = "",
+    ext: str = "png",
 ):
+    """
+    将多个掩膜依次保存为 prefix1.png、prefix2.png … 到当前目录。
+    支持可视化点 (point_coords, input_labels) 和框 (box_coords)。
 
-    import matplotlib.pyplot as plt
+    Args:
+        image:          原始 RGB 图像，shape=(H, W, 3)，dtype=uint8。
+        masks:          掩膜列表，每个是 shape=(h, w) 的 float 或 bool 数组。
+        scores:         与 masks 对应的置信度列表。
+        point_coords:   可选，shape=(N,2) 的 点坐标，用于叠加显示。
+        box_coords:     可选，形如 (x0, y0, x1, y1) 的框坐标。
+        input_labels:   可选，shape=(N,) 的 1/0，标记正负点。
+        borders:        是否在掩膜周围画边界 (默认 True)。
+        prefix:         保存文件名前缀（例如 "sam_" 会生成 sam_1.png）。
+        ext:            文件扩展名 (默认 "png")。
 
-    for i, (mask, score) in enumerate(zip(masks, scores), 1):
-        plt.figure(figsize=(6, 6))
-        plt.imshow(image)
-        show_mask(mask, plt.gca(), borders=borders)
+    注意：
+        - 当 mask 分辨率 ≠ 原图分辨率时，会自动使用 INTER_NEAREST 最近邻放大到原图。
+        - mask dtype 不是 bool 时，会执行 (mask > 0.5) 转为 bool。
+    """
+    H, W = image.shape[:2]
 
-        # ---- 额外可视化（可选）----
+    def show_mask(mask, ax, random_color=False, borders=True):
+        """
+        内部绘制单个掩膜到 matplotlib 轴上。
+        """
+        if random_color:
+            color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
+        else:
+            color = np.array([30/255, 144/255, 255/255, 0.6])  # RGBA
+        h, w = mask.shape[-2:]
+        mask_uint = (mask.astype(np.uint8) if mask.dtype != np.uint8 else mask)
+        mask_image = mask_uint.reshape(h, w, 1) * color.reshape(1, 1, -1)
+        if borders:
+            contours, _ = cv2.findContours(mask_uint, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            contours = [cv2.approxPolyDP(cnt, epsilon=0.01, closed=True) for cnt in contours]
+            mask_image = cv2.drawContours(mask_image, contours, -1, (1, 1, 1, 0.5), thickness=2)
+        ax.imshow(mask_image)
+
+    def show_points(coords, labels, ax, marker_size=375):
+        pos = coords[labels == 1]
+        neg = coords[labels == 0]
+        ax.scatter(pos[:, 0], pos[:, 1], color="green", marker="*", s=marker_size,
+                   edgecolor="white", linewidth=1.25)
+        ax.scatter(neg[:, 0], neg[:, 1], color="red",   marker="*", s=marker_size,
+                   edgecolor="white", linewidth=1.25)
+
+    def show_box(box, ax):
+        x0, y0, x1, y1 = box
+        w, h = x1 - x0, y1 - y0
+        ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor="green",
+                                   facecolor=(0, 0, 0, 0), lw=2))
+
+    for i, (mask, score) in enumerate(zip(masks, scores), start=1):
+        # 1️⃣ 转 bool
+        if mask.dtype != np.bool_:
+            m_bool = (mask > 0.5)
+        else:
+            m_bool = mask
+
+        if m_bool.shape != (H, W):
+            m_uint = m_bool.astype(np.uint8)
+            m_resized = cv2.resize(
+                m_uint, (W, H), interpolation=cv2.INTER_NEAREST
+            )
+            m_bool = m_resized.astype(bool)
+
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.imshow(image)
+        show_mask(m_bool, ax, borders=borders)
+
         if point_coords is not None and input_labels is not None:
-            show_points(point_coords, input_labels, plt.gca())
+            show_points(point_coords, input_labels, ax)
+
         if box_coords is not None:
-            show_box(box_coords, plt.gca())
+            show_box(box_coords, ax)
 
         if len(scores) > 1:
-            plt.title(f"Mask {i}, Score: {score:.3f}")
+            ax.set_title(f"Mask {i}, Score: {score:.3f}", fontsize=16)
 
-        plt.axis("off")
+        ax.axis("off")
+
         fname = f"{prefix}{i}.{ext}"
-        plt.savefig(fname, bbox_inches="tight", pad_inches=0)
-        plt.close()
+        fig.savefig(fname, bbox_inches="tight", pad_inches=0)
+        plt.close(fig)
         print("saved:", fname)
 
 # ───────── GPU 可见性 ─────────
