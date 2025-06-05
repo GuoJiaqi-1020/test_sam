@@ -38,13 +38,11 @@ import argparse, json, re
 from pathlib import Path
 from typing import List, Dict
 
-import cv2
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
+import cv2, numpy as np, torch, matplotlib.pyplot as plt
 from PIL import Image
-from sam2.modeling import SamPredictor
 from transformers import AutoModelForVision2Seq, AutoProcessor
+# **Fixed here**
+from segment_anything import SamPredictor, sam_model_registry
 
 # ───────────────────────── helpers ────────────────────────────────
 
