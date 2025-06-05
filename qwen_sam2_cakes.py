@@ -57,9 +57,10 @@ def load_qwen(model_dir: str):
     return proc, model
 
 
-def ask_for_points(proc, model, pil_img: Image.Image) -> List[Dict[str, int]]:
+def ask_for_points(proc, model, pil_img):
+    img_token = getattr(proc.tokenizer, "image_token", "<img>")  # 官方占位符
     prompt = (
-        "<|image|>\n" 
+        f"{img_token} "      # ← 一定要放在最前面，不要换行
         "Identify the approximate center point of **each** cake in the picture. "
         "Return a JSON list where each element is {'x': int, 'y': int}."
     )
