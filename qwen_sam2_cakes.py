@@ -234,7 +234,6 @@ def main():
             points = FIXED_POINTS
         print("⚡ 使用手动点：", points)
 
-        # 构造假的 inputs 以便获取 in_W/in_H
         in_W, in_H = img_w, img_h   # 直接用原尺寸
         inputs = {"image_grid_thw": np.array([[1, in_H//14, in_W//14]])}
 
@@ -275,21 +274,8 @@ def main():
     sorted_ind = np.argsort(scores)[::-1]
     masks = masks[sorted_ind]
     scores = scores[sorted_ind]
-    logits = logits[sorted_ind]
     print('masks shape:', masks.shape)
     save_masks(orig_rgb, masks, scores, point_coords=pts_xy, input_labels=input_label, borders=True)
-
-    # ---------- 4. 叠加 & 保存 ----------
-    overlay = orig_rgb.copy()
-    alpha   = 0.4
-    for idx, m in enumerate(masks):
-        color = ImageColor.getrgb(COLORS[idx % len(COLORS)])
-        layer = np.zeros_like(orig_rgb)
-        layer[m] = color
-        overlay = cv2.addWeighted(layer, alpha, overlay, 1 - alpha, 0)
-
-    Image.fromarray(overlay).save(OUT_SAM2)
-    print("Overlay saved →", pathlib.Path(OUT_SAM2).resolve())
 
 
 if __name__ == "__main__":
