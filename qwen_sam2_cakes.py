@@ -22,10 +22,7 @@ from qwen_vl_utils import process_vision_info
 # ---------- 配置 ----------
 MODEL_DIR  = "./qwen_vl"
 IMAGE_PATH = "./assets/spatial_understanding/cakes.png"
-PROMPT = (
-    "在图片中以点形式标出每个小蛋糕中心，并用 XML 输出："
-    "<points x1 y1>cake</points><points x2 y2>cake</points>..."
-)
+PROMPT = "point to the rolling pin on the far side of the table, output its coordinates in XML format <points x y>object</points>"
 OUT_PNG = "cakes_with_points.png"
 COLORS = list(ImageColor.colormap.keys())
 
