@@ -186,7 +186,7 @@ def main():
     # input_point = np.array([[750, 783]])
     input_label = np.array([1])
     masks, scores, logits = predictor.predict(
-        point_coords=point,
+        point_coords=points,
         point_labels=input_label,
         multimask_output=True,
     )
