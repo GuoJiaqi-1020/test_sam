@@ -24,7 +24,7 @@ MODEL_DIR  = "./qwen_vl"
 IMAGE_PATH = "./assets/spatial_understanding/cakes.png"
 # PROMPT = "point to the rolling pin on the far side of the table, output its coordinates in XML format <points x y>object</points>"
 PROMPT = "Locate the spoon, and output its coordinates in XML format <points x y>object</points>"
-OUT_PNG = "cakes_with_points.png"
+OUT_PNG = "Qwen_output.png"
 COLORS = list(ImageColor.colormap.keys())
 
 # ---------- 加载模型 ----------
@@ -86,13 +86,18 @@ grid_h, grid_w = inputs["image_grid_thw"][0][1:].tolist()
 in_H, in_W = grid_h * 14, grid_w * 14
 print(f"Image size: {W}x{H}, Grid size sent to model: {in_W}x{in_H}")
 
+DEFAULT_TTF = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+try:
+    font = ImageFont.truetype(DEFAULT_TTF, size=20)
+except IOError:
+    font = ImageFont.load_default()
 for i, (x, y, label) in enumerate(points):
     vx = x / in_W * W
     vy = y / in_H * H
     c  = COLORS[i % len(COLORS)]
     r  = 10
     draw.ellipse([(vx - r, vy - r), (vx + r, vy + r)], fill=c)
-    draw.text((vx + r + 4, vy + r + 4), label, fill=c)
+    draw.text((vx + r + 4, vy + r + 4), label, fill=c, font=font)
 
 img.save(OUT_PNG)
 print("Saved →", pathlib.Path(OUT_PNG).resolve())
