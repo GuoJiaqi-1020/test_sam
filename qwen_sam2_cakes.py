@@ -22,7 +22,7 @@ MODEL_DIR   = "./qwen_vl"
 IMAGE_PATH  = "./assets/spatial_understanding/cakes.png"
 PROMPT      = "Locate the spoon, and output its coordinates in XML format <points x y>object</points>"
 SAM2_CKPT   = "./sam2_ckpt/sam2_hiera_large.pt"   # ← 改成你的权重路径
-OUT_QWEN    = "Qwen_output.png"
+OUT_QWEN    = "QWEN_output.png"
 OUT_SAM2    = "SAM2_output.png"
 COLORS      = list(ImageColor.colormap.keys())
 
