@@ -46,7 +46,7 @@ messages = [[{
 # ---------- Processor 打包 ----------
 text = proc.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 imgs, vids, vkw = process_vision_info(messages, return_video_kwargs=True)
-inputs = proc(text=[text], images=imgs, videos=vids, return_tensors="pt", **vkw).to(model.device)
+inputs = proc(text=text, images=imgs, videos=vids, return_tensors="pt", **vkw).to(model.device)
 
 # ---------- 推理 ----------
 with torch.inference_mode():
