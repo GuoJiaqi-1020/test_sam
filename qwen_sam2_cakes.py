@@ -276,7 +276,7 @@ def main():
     scores = scores[sorted_ind]
     print('masks shape:', masks.shape)
     save_masks(orig_rgb, masks, scores, point_coords=pts_xy, input_labels=input_label, borders=True)
-
+    print("SAM2 masks saved →", pathlib.Path(OUT_SAM2).resolve())
 
 if __name__ == "__main__":
     main()
