@@ -22,7 +22,7 @@ from sam2.sam2_image_predictor import SAM2ImagePredictor
 MODEL_DIR   = "./qwen_vl"
 IMAGE_PATH  = "./assets/spatial_understanding/cakes.png"
 PROMPT      = "Locate the spoon, and output its coordinates in XML format <points x y>object</points>"
-SAM2_YAML = "./sam2.1/sam2.1_hiera_l"
+SAM2_YAML = "./sam2/sam2.1_hiera_l.yaml"
 SAM2_PT   = "./sam2_ckpt/sam2.1_hiera_large.pt"
 device    = "cuda" if torch.cuda.is_available() else "cpu"
 OUT_QWEN    = "QWEN_output.png"
