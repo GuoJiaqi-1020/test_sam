@@ -59,13 +59,14 @@ def load_qwen(model_dir: str):
 
 def ask_for_points(proc, model, pil_img: Image.Image) -> List[Dict[str, int]]:
     prompt = (
+        "<|image|>\n" 
         "Identify the approximate center point of **each** cake in the picture. "
         "Return a JSON list where each element is {'x': int, 'y': int}."
     )
     inputs = proc(text=prompt, images=pil_img, return_tensors="pt").to(model.device)
     with torch.inference_mode():
-        out = model.generate(**inputs, max_new_tokens=128)
-    txt = proc.tokenizer.decode(out[0], skip_special_tokens=True)
+        gen = model.generate(**inputs, max_new_tokens=128)
+    txt = proc.tokenizer.decode(gen[0], skip_special_tokens=True)
     m = re.search(r"\[[\s\S]*\]", txt)
     if not m:
         raise ValueError(f"Qwen did not return JSON list, got: {txt}")
