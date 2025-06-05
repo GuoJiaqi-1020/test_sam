@@ -69,8 +69,9 @@ PROMPT      = (
 )
 
 # SAM-2.1
-SAM2_CFG = "sam2/sam2_hiera_b_plus"             # 不带 .yaml
-SAM2_PT  = "./sam2_ckpt/sam2_hiera_base_plus.pt"
+sam2_checkpoint = "../checkpoints/sam2.1_hiera_large.pt"
+model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
+
 DEVICE   = "cuda" if torch.cuda.is_available() else "cpu"
 
 # 输出文件
@@ -176,7 +177,7 @@ def main():
     print("Points saved →", pathlib.Path(OUT_QWEN).resolve())
 
     # ---------- 3. SAM-2.1 分割 ----------
-    sam2_model = build_sam2(SAM2_CFG, SAM2_PT, device=DEVICE)
+    sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=DEVICE)
     predictor   = SAM2ImagePredictor(sam2_model)
 
     orig_rgb = np.array(Image.open(IMAGE_PATH).convert("RGB"))
