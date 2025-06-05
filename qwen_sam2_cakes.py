@@ -10,7 +10,8 @@ conda activate qwen_sam2   # 你的环境
 pip install git+https://github.com/QwenLM/Qwen-VL.git
 # 权重放到 ./qwen_vl
 """
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5"
 import re, json, random, pathlib, ast, os
 from typing import List
 from PIL import Image, ImageDraw, ImageFont, ImageColor
