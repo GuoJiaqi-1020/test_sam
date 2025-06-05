@@ -37,8 +37,8 @@ PROMPT      = (
 )
 
 # SAM-2.1
-SAM2_CFG = "sam2.1/sam2.1_hiera_b_plus"             # 不带 .yaml
-SAM2_PT  = "./sam2_ckpt/sam2.1_hiera_base_plus.pt"
+SAM2_CFG = "sam2/sam2_hiera_b_plus"             # 不带 .yaml
+SAM2_PT  = "./sam2_ckpt/sam2_hiera_base_plus.pt"
 DEVICE   = "cuda" if torch.cuda.is_available() else "cpu"
 
 # 输出文件
